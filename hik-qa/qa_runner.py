@@ -17,9 +17,19 @@ creds = service_account.Credentials.from_service_account_file(
 )
 gc = gspread.authorize(creds)
 sh = gc.open_by_key(QA_SHEET_ID)
-ws = sh.worksheet("QA Issues")
 ws_repeat = sh.worksheet("반복테스트")
 sheets_service = build("sheets", "v4", credentials=creds)
+
+STATE_TAB = {
+    "비로그인": "QA Issues (비로그인)",
+    "게스트":   "QA Issues (게스트)",
+    "호스트":   "QA Issues (호스트)",
+    "관리자":   "QA Issues (관리자)",
+}
+
+def get_ws(state):
+    tab = STATE_TAB.get(state, "QA Issues")
+    return sh.worksheet(tab)
 
 
 def upload_screenshot(path):
@@ -35,10 +45,11 @@ def upload_screenshot(path):
 
 
 def log_issue(state, screen, issue_type, description, severity, screenshot_path=None, highlight_yellow=False):
+    ws = get_ws(state)
     rows = ws.get_all_values()
-    # 중복 체크 — 상태/화면명/이슈유형/설명이 모두 같으면 추가하지 않음
+    # 중복 체크 — 화면명/이슈유형/설명이 모두 같으면 추가하지 않음
     for row in rows[1:]:
-        if len(row) >= 5 and row[1] == state and row[2] == screen and row[3] == issue_type and row[4] == description:
+        if len(row) >= 5 and row[2] == screen and row[3] == issue_type and row[4] == description:
             print(f"  ⏭️  중복 이슈 건너뜀: [{screen}] {description}")
             return
     num = len(rows)
@@ -101,6 +112,7 @@ def resolve_manual_check(state, screen, issue_type, description, result_severity
     """수동 확인 완료 처리 — 확인필요 행 삭제.
     result_severity가 있으면 삭제 후 정식 이슈로 재기록, 없으면 문제없음으로 삭제만.
     """
+    ws = get_ws(state)
     rows = ws.get_all_values()
     row_to_delete = None
     for i, row in enumerate(rows[1:], start=2):  # 1-based, 헤더 제외
