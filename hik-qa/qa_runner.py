@@ -97,6 +97,31 @@ def log_manual_check(state, screen, issue_type, description):
               severity="확인필요", highlight_yellow=True)
 
 
+def resolve_manual_check(state, screen, issue_type, description, result_severity=None):
+    """수동 확인 완료 처리 — 확인필요 행 삭제.
+    result_severity가 있으면 삭제 후 정식 이슈로 재기록, 없으면 문제없음으로 삭제만.
+    """
+    rows = ws.get_all_values()
+    row_to_delete = None
+    for i, row in enumerate(rows[1:], start=2):  # 1-based, 헤더 제외
+        if (len(row) >= 6 and row[1] == state and row[2] == screen
+                and row[3] == issue_type and row[4] == description
+                and row[5] == "확인필요"):
+            row_to_delete = i
+            break
+
+    if row_to_delete is None:
+        print(f"  ℹ️  삭제 대상 없음: [{screen}] {description}")
+        return
+
+    ws.delete_rows(row_to_delete)
+    print(f"  🗑️  확인필요 행 삭제: [{screen}] {description}")
+
+    if result_severity:
+        log_issue(state, screen, issue_type, description, severity=result_severity)
+        print(f"  ❌ 정식 이슈로 재기록: [{result_severity}]")
+
+
 def log_repeat_test(flow_name, total, failures):
     """반복테스트 결과를 '반복테스트' 시트에 기록.
     failures: list of (회차, 에러메시지, screenshot_path)
