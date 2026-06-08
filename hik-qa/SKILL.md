@@ -103,7 +103,6 @@ def log_manual_check(state, screen, issue_type, description):
 |--------|------|
 | 높음 | 화면 이동 불가, 404, 크래시, 팝업 미노출 |
 | 중간 | 잘못된 화면으로 이동, 뒤로가기 오작동, 팝업 미닫힘 |
-| 낮음 | UI가 Figma와 다름 (색상, 텍스트, 간격 등) |
 
 ## Google Sheet 기록 코드 패턴
 
