@@ -1,0 +1,146 @@
+---
+name: hik-qa
+description: Use when doing QA on HomeSinKorea web service — checking UI matches Figma, flows match the flow document, back navigation, and popup/bottom sheet behavior across non-logged-in, guest, host, and admin states
+---
+
+# HIK Web Service QA
+
+## Overview
+Playwright 기반 QA 스킬. 4가지 규칙을 4개 상태별로 순차 검증하고, 이슈를 Google Sheet에 기록한다.
+
+## 고정 설정값
+
+| 항목 | 값 |
+|------|-----|
+| 서비스 URL | https://homesinkorea-git-develop-homesinkorea.vercel.app |
+| Figma 파일키 | 7DEB0l3BEOeJWLwbkpxgir |
+| Google Sheet ID | 1-n6YwMjppwANQRiT3qIytOzRt-pUvoIushUzgT4sef8 |
+| 서비스 계정 키 | /Users/sujin/Downloads/swift-implement-498523-i1-4c673fb266fe.json |
+
+## 테스트 계정
+
+| 상태 | ID | PW | 진입 |
+|------|----|----|------|
+| 게스트 | guesttest01@gmail.com | (팀 내부 공유) | /login |
+| 호스트 | hostuser01@gmail.com | (팀 내부 공유) | /login/host |
+| 관리자 | admintest01@gmail.com | (팀 내부 공유) | /login → /admin/payments |
+
+## QA 시작 전 필수 입력
+
+- **플로우 문서**: 화면명, 버튼, 이동 대상, 팝업/바텀시트 매핑이 정의된 문서
+- 문서가 없으면 규칙 2 (플로우 검증)를 진행할 수 없으므로 반드시 먼저 받아야 한다
+
+## 5가지 QA 규칙
+
+### 규칙 1. 버튼 UI — Figma 이미지와 동일한지
+- Figma MCP(`get_screenshot`, `get_design_context`)로 해당 화면 디자인 가져오기
+- Playwright로 실제 화면 스크린샷 촬영
+- 버튼 텍스트, 색상, 위치, 아이콘을 육안 비교
+- **양방향 검증 필수**:
+  - Figma에 있는데 실제에 없는 요소 → 이슈 기록
+  - 실제에 있는데 Figma에 없는 요소 → 이슈 기록
+- 차이가 있으면 이슈로 기록
+
+### 규칙 2. 플로우 — 문서와 동일하게 흘러가는지
+- 플로우 문서의 각 단계: `화면 → 버튼 클릭 → 이동 대상` 순서대로 Playwright로 실행
+- 이동한 URL/화면이 문서와 다르거나 404면 이슈로 기록
+
+### 규칙 3. 뒤로가기 — 직전 화면으로 이동하는지
+- Playwright로 A화면 → B화면 이동 후 `page.go_back()` 실행
+- 돌아온 URL이 A화면인지 확인
+- 인앱 뒤로가기 버튼(← 아이콘)이 있으면 클릭해서도 확인
+
+### 규칙 4. 팝업/바텀시트 — 올바른 것이 열리고 정상 닫히는지
+- 플로우 문서의 `버튼 → 팝업/바텀시트` 매핑대로 Playwright로 트리거
+- 열린 팝업/바텀시트의 제목/내용이 문서와 일치하는지 확인
+- X버튼, 배경 탭, 닫기 버튼으로 각각 닫기 테스트
+- 닫힌 후 원래 화면으로 돌아왔는지 확인
+
+### 규칙 5. 미설계 요소 — 실제 화면에 Figma에 없는 요소가 있는지
+- Figma 디자인 기준으로 각 화면의 전체 요소 목록 확인
+- 실제 화면에서 Figma에 없는 버튼, 메뉴, 텍스트, 링크가 있으면 이슈로 기록
+- 규칙 1과 함께 실행 (UI 검증 단계에서 역방향도 동시에 확인)
+
+### 규칙 6. 수동 확인 필요 — 데이터 부족으로 자동 검증 불가한 경우
+- 테스트 데이터가 없어 자동 검증이 불가능한 케이스는 건너뛰지 않고 반드시 기록
+- 심각도를 `확인필요`로 설정
+- Google Sheet 해당 행을 **노란색 배경**으로 표시
+- 예: 알림 없어서 알림 있을 때 화면 검증 불가, 예약 내역 없어서 예약 목록 화면 검증 불가
+
+```python
+def log_manual_check(state, screen, issue_type, description):
+    # 심각도: 확인필요, 행 배경: 노란색(#FFF9C4)
+    log_issue(state, screen, issue_type, description,
+              severity='확인필요', highlight_yellow=True)
+```
+
+## QA 실행 순서
+
+```
+1. 비로그인 상태 → 4가지 규칙 검증
+2. 게스트 로그인 → 4가지 규칙 검증
+3. 호스트 로그인 → 4가지 규칙 검증
+4. 관리자 로그인 → 4가지 규칙 검증
+```
+
+각 상태 완료 후 이슈 목록 중간 정리 후 다음 상태로 넘어간다.
+
+## 이슈 기록 형식 (Google Sheet)
+
+| 컬럼 | 내용 예시 |
+|------|----------|
+| 번호 | 자동 순번 |
+| 상태 | 비로그인 / 게스트 / 호스트 / 관리자 |
+| 화면명 | 홈, 매물상세, 예약확인 등 |
+| 이슈유형 | UI / 플로우 / 뒤로가기 / 팝업·바텀시트 |
+| 설명 | 예약하기 버튼 클릭 시 404 발생 |
+| 심각도 | 높음 / 중간 / 낮음 |
+| 확인일시 | 자동 기록 |
+
+## 이슈 심각도 기준
+
+| 심각도 | 기준 |
+|--------|------|
+| 높음 | 화면 이동 불가, 404, 크래시, 팝업 미노출 |
+| 중간 | 잘못된 화면으로 이동, 뒤로가기 오작동, 팝업 미닫힘 |
+| 낮음 | UI가 Figma와 다름 (색상, 텍스트, 간격 등) |
+
+## Google Sheet 기록 코드 패턴
+
+```python
+import gspread
+from google.oauth2 import service_account
+from datetime import datetime
+
+KEY_FILE = '/Users/sujin/Downloads/swift-implement-498523-i1-4c673fb266fe.json'
+SHEET_ID = '1-n6YwMjppwANQRiT3qIytOzRt-pUvoIushUzgT4sef8'
+
+creds = service_account.Credentials.from_service_account_file(
+    KEY_FILE, scopes=['https://www.googleapis.com/auth/spreadsheets']
+)
+gc = gspread.authorize(creds)
+ws = gc.open_by_key(SHEET_ID).worksheet('QA Issues')
+
+def log_issue(state, screen, issue_type, description, severity):
+    rows = ws.get_all_values()
+    num = len(rows)  # 헤더 제외 순번
+    ws.append_row([
+        num, state, screen, issue_type, description, severity,
+        datetime.now().strftime('%Y-%m-%d %H:%M')
+    ])
+```
+
+## Playwright 로그인 패턴
+
+```python
+# 게스트
+page.goto('/login')
+page.fill('input[type="email"]', 'guesttest01@gmail.com')
+page.fill('input[type="password"]', 'Guestpass1234!')
+page.click('button[type="submit"]')
+page.wait_for_load_state('networkidle')
+
+# 관리자 (로그인 후 직접 진입)
+# admintest01@gmail.com / Adminpass1234! 로 /login 로그인 후
+page.goto('/admin/payments')
+```
