@@ -74,6 +74,23 @@ def log_manual_check(state, screen, issue_type, description):
               severity='확인필요', highlight_yellow=True)
 ```
 
+## 자동 모니터링
+
+플로우 문서(Sheet ID: `1m9PqwYK9-nT35-2Nv3spQAgsJybneWn81yMfBTkHAKc`)를 **30분마다** 확인한다.
+
+**QA 실행 조건**: 아래 5개 컬럼이 모두 채워진 새 행이 생겼을 때만 QA 진행
+- 출발 화면 ID
+- 출발 화면 이름
+- 트리거 (버튼/요소)
+- 동작 유형
+- 도착 화면 ID
+
+새 행이 없으면 조용히 종료. 세션 시작 시 CronCreate로 등록:
+```
+cron: */30 * * * *
+recurring: true
+```
+
 ## QA 실행 순서
 
 ```
