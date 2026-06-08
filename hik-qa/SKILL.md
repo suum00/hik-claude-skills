@@ -74,6 +74,39 @@ def log_manual_check(state, screen, issue_type, description):
               severity='확인필요', highlight_yellow=True)
 ```
 
+## 핵심 플로우 반복 검증 (문서 독립)
+
+아래 4개 플로우는 플로우 문서와 별개로 **매 QA마다 10회 반복 실행**하여 안정성을 검증한다.
+
+| 플로우 | 진입 | 성공 기준 |
+|--------|------|-----------|
+| 이용문의 | 숙소 상세 → Chat 버튼 → `/inquiry/:id` | 메시지 전송 성공 팝업 노출 |
+| 숙소등록 | 호스트 대시보드 → 숙소 등록 | 등록 완료 후 목록에 노출 |
+| 방 등록 | 숙소 관리 → 방 추가 | 방 정보 저장 후 목록에 노출 |
+| 채팅 | `/messages` → 채팅방 진입 → 메시지 전송 | 전송 메시지가 상대방 채팅방에 노출 |
+
+- 10회 중 1회라도 실패하면 이슈 기록 (심각도: 높음)
+- 성공률을 설명 컬럼에 기재: 예) `10회 중 2회 실패 (성공률 80%)`
+- 실패한 회차의 스크린샷 첨부
+
+```python
+def repeat_flow_test(page, flow_name, test_fn, repeat=10):
+    failures = []
+    for i in range(repeat):
+        try:
+            test_fn(page)
+        except Exception as e:
+            screenshot_path = f"{SCREENSHOT_DIR}/{flow_name}_fail_{i+1}.png"
+            page.screenshot(path=screenshot_path)
+            failures.append((i + 1, str(e), screenshot_path))
+    if failures:
+        desc = f"{repeat}회 중 {len(failures)}회 실패 (성공률 {(repeat-len(failures))*10}%)"
+        log_issue("공통", flow_name, "플로우", desc, severity="높음",
+                  screenshot_path=failures[0][2])
+    else:
+        ok(f"{flow_name} {repeat}회 전체 성공")
+```
+
 ## QA 시작 트리거
 
 사용자가 **"QA 시작"** 이라고 하면 아래 순서로 동작한다:
