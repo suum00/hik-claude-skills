@@ -99,27 +99,25 @@ def log_manual_check(state, screen, issue_type, description):
 | `반복테스트 5회 해줘` | 6개 플로우 각 5회 |
 | `이용문의 반복테스트 3회 해줘` | 이용문의만 3회 |
 
-- 1회라도 실패하면 이슈 기록 (심각도: 높음)
-- 성공률을 설명 컬럼에 기재: 예) `10회 중 2회 실패 (성공률 80%)`
-- 실패한 회차의 스크린샷 첨부
+## 반복테스트 결과 기록 — Google Sheet "반복테스트" 탭
 
-```python
-def repeat_flow_test(page, flow_name, test_fn, repeat=10):
-    failures = []
-    for i in range(repeat):
-        try:
-            test_fn(page)
-        except Exception as e:
-            screenshot_path = f"{SCREENSHOT_DIR}/{flow_name}_fail_{i+1}.png"
-            page.screenshot(path=screenshot_path)
-            failures.append((i + 1, str(e), screenshot_path))
-    if failures:
-        desc = f"{repeat}회 중 {len(failures)}회 실패 (성공률 {(repeat-len(failures))*10}%)"
-        log_issue("공통", flow_name, "플로우", desc, severity="높음",
-                  screenshot_path=failures[0][2])
-    else:
-        ok(f"{flow_name} {repeat}회 전체 성공")
-```
+QA Issues 탭과 별도로 **"반복테스트"** 탭에 기록한다.
+
+| 컬럼 | 내용 |
+|------|------|
+| 번호 | 자동 순번 |
+| 플로우 | 로그인 / 회원가입 / 이용문의 / 숙소등록 / 방 등록 / 채팅 |
+| 테스트 횟수 | 실행한 총 횟수 |
+| 실패 횟수 | 실패한 횟수 |
+| 성공률 | `(성공/전체) × 100%` |
+| 실패 회차 | 실패한 회차 번호 (예: 3, 7) |
+| 마지막 실패 원인 | 에러 메시지 앞 100자 |
+| 확인일시 | 자동 기록 |
+| 스크린샷 | 첫 번째 실패 회차 스크린샷 IMAGE() 삽입 |
+
+- 실패가 있으면 해당 행 **연한 빨간색 배경** 표시
+- 같은 플로우를 당일 재실행하면 해당 행을 덮어씀 (중복 방지)
+- `repeat_flow_test(page, flow_name, test_fn, repeat)` 함수가 실행 및 기록을 담당
 
 ## QA 시작 트리거
 
