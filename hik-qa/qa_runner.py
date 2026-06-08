@@ -7,9 +7,9 @@ from googleapiclient.discovery import build
 from playwright.sync_api import sync_playwright
 
 BASE_URL = "https://homesinkorea-git-develop-homesinkorea.vercel.app"
-KEY_FILE = "/Users/sujin/Downloads/swift-implement-498523-i1-4c673fb266fe.json"
+KEY_FILE = os.environ['HIK_SA_KEY']
 QA_SHEET_ID = "1-n6YwMjppwANQRiT3qIytOzRt-pUvoIushUzgT4sef8"
-SCREENSHOT_DIR = "/Users/sujin/hik-qa-test/screenshots"
+SCREENSHOT_DIR = os.path.expanduser("~/hik-qa-test/screenshots")
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
 creds = service_account.Credentials.from_service_account_file(
