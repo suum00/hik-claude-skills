@@ -74,6 +74,14 @@ def log_manual_check(state, screen, issue_type, description):
               severity='확인필요', highlight_yellow=True)
 ```
 
+## QA 시작 트리거
+
+사용자가 **"QA 시작"** 이라고 하면 아래 순서로 동작한다:
+1. 플로우 문서(Sheet ID: `1m9PqwYK9-nT35-2Nv3spQAgsJybneWn81yMfBTkHAKc`) 읽기
+2. 5개 컬럼(출발 화면 ID / 출발 화면 이름 / 트리거 / 동작 유형 / 도착 화면 ID)이 모두 채워진 행만 QA 대상으로 선정
+3. 이전 QA 결과와 비교 — 변경된 행이 있으면 해당 화면 재QA, 새 행이 있으면 신규 QA
+4. 대상 화면에 대해 전체 규칙 검증 실행
+
 ## QA 실행 순서
 
 ```
