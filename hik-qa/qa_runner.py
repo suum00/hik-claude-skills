@@ -1,5 +1,4 @@
 import os
-import requests
 import gspread
 from datetime import datetime
 from google.oauth2 import service_account
@@ -32,53 +31,22 @@ def get_ws(state):
     return sh.worksheet(tab)
 
 
-def upload_screenshot(path):
-    """catbox.moe에 이미지 업로드 후 URL 반환"""
-    try:
-        with open(path, "rb") as f:
-            resp = requests.post("https://catbox.moe/user/api.php",
-                                 data={"reqtype": "fileupload"},
-                                 files={"fileToUpload": f}, timeout=15)
-        return resp.text.strip() if resp.status_code == 200 else ""
-    except Exception:
-        return ""
-
-
 def log_issue(state, screen, issue_type, description, severity, screenshot_path=None, highlight_yellow=False):
     ws = get_ws(state)
     rows = ws.get_all_values()
-    # 중복 체크 — 화면명/이슈유형/설명이 모두 같으면 추가하지 않음
     for row in rows[1:]:
         if len(row) >= 5 and row[2] == screen and row[3] == issue_type and row[4] == description:
             print(f"  ⏭️  중복 이슈 건너뜀: [{screen}] {description}")
             return
     num = len(rows)
-    row_idx = num + 1  # 1-based
+    row_idx = num + 1
 
-    img_url = upload_screenshot(screenshot_path) if screenshot_path else ""
+    ss_note = os.path.basename(screenshot_path) if screenshot_path else ""
     ws.append_row([num, state, screen, issue_type, description, severity,
-                   datetime.now().strftime("%Y-%m-%d %H:%M"), ""])
+                   datetime.now().strftime("%Y-%m-%d %H:%M"), ss_note])
 
     sheet_id = ws.id
     requests_body = []
-
-    # 스크린샷 삽입
-    if img_url:
-        requests_body += [
-            {"updateCells": {
-                "range": {"sheetId": sheet_id,
-                          "startRowIndex": row_idx - 1, "endRowIndex": row_idx,
-                          "startColumnIndex": 7, "endColumnIndex": 8},
-                "rows": [{"values": [{"userEnteredValue": {"formulaValue": f'=IMAGE("{img_url}")'}}]}],
-                "fields": "userEnteredValue"
-            }},
-            {"updateDimensionProperties": {
-                "range": {"sheetId": sheet_id, "dimension": "ROWS",
-                          "startIndex": row_idx - 1, "endIndex": row_idx},
-                "properties": {"pixelSize": 200},
-                "fields": "pixelSize"
-            }}
-        ]
 
     # 노란색 배경 (수동 확인 필요)
     if highlight_yellow:
@@ -143,8 +111,6 @@ def log_repeat_test(flow_name, total, failures):
     fail_rounds = ", ".join(str(f[0]) for f in failures) if failures else "-"
     last_error = failures[-1][1][:100] if failures else "-"
     screenshot_url = ""
-    if failures:
-        screenshot_url = upload_screenshot(failures[0][2]) if failures[0][2] else ""
 
     rows = ws_repeat.get_all_values()
     # 중복 체크 — 같은 플로우·총횟수·실패횟수 조합이 오늘 날짜로 이미 있으면 덮어쓰지 않음
