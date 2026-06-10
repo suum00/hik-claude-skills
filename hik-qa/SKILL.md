@@ -288,8 +288,17 @@ def log_issue(state, screen, issue_type, description, severity, screenshot_path=
         apply_screenshot_to_sheet(sheets_service, SHEET_ID, ws.id, sheet_row, urls)
 ```
 
-> **스크린샷 규칙**: 이슈 기록 시 `screenshot_path`를 반드시 전달한다.
-> 로컬 `/tmp/screenshot.png` → Drive 자동 업로드 → H열 인라인 미리보기 + I열 "열기" 링크
+> **스크린샷 규칙 (두 가지 케이스 구분)**:
+>
+> **케이스 1 — QA 오류 자동 기록 시**
+> Playwright가 스크린샷 촬영 → Drive `HIK QA Screenshots` 폴더에 자동 업로드 → H열 인라인 미리보기 + I열 "열기" 링크 자동 삽입
+>
+> **케이스 2 — 사용자가 직접 사진을 넣은 경우 ("링크 넣어" 요청)**
+> Playwright 촬영 없음. 사용자가 이미 Drive에 올린 파일을 찾아 연결한다.
+> 1. 해당 행 이슈 설명 확인
+> 2. Drive `HIK QA Screenshots` 폴더에서 `contentSnippet` 키워드 매칭으로 파일 탐색
+> 3. I열에만 `=HYPERLINK("https://drive.google.com/file/d/FILE_ID/view","열기")` 삽입
+> 4. H열 이미지(사용자가 셀 내 이미지 넣기로 직접 삽입한 것)는 절대 덮어쓰지 않는다.
 
 ## Playwright 로그인 패턴
 
